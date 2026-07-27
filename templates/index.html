@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brute Force Simulator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>BRUTE FORCE SIMULATOR</h1>
+            <p class="subtitle">Authorized Local Security Testing Environment</p>
+        </header>
+
+        <div class="dashboard">
+            <div class="config-panel">
+                <h2>TARGET CONFIGURATION</h2>
+
+                <div class="form-group">
+                    <label class="label" for="target-app">Target Application</label>
+                    <input type="text" id="target-app" class="form-input"
+                           placeholder="e.g. Velora E-Commerce" value="Velora E-Commerce">
+                </div>
+
+                <div class="form-group">
+                    <label class="label" for="target-url">Target URL</label>
+                    <input type="text" id="target-url" class="form-input"
+                           placeholder="http://127.0.0.1:5000/login"
+                           value="http://127.0.0.1:5000/login">
+                    <span class="form-hint">Only 127.0.0.1 or localhost on port 5000 are permitted</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="label" for="target-account">Target Account (Email)</label>
+                    <input type="email" id="target-account" class="form-input"
+                           placeholder="e.g. jaspreet@gmail.com">
+                    <span class="form-hint">Authorized test account email for the local target</span>
+                </div>
+
+                <div class="config-item">
+                    <span class="label">Attack Type</span>
+                    <span class="value">Brute Force Login Simulation</span>
+                </div>
+
+                <div class="config-item">
+                    <span class="label">Maximum Attempts</span>
+                    <span class="value locked-value">{{ max_attempts }}</span>
+                </div>
+            </div>
+
+            <div class="status-panel">
+                <h2>STATUS CARDS</h2>
+                <div class="status-cards">
+                    <div class="status-card">
+                        <div class="card-label">Attempts</div>
+                        <div class="card-value" id="attempts">0 / {{ max_attempts }}</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="card-label">Simulation Status</div>
+                        <div class="card-value status-ready" id="sim-status">READY</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="card-label">Target Status</div>
+                        <div class="card-value" id="target-status">AVAILABLE</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="card-label">ATTACK STATUS</div>
+                        <div class="card-value" id="attack-status">NOT STARTED</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-panel">
+                <h2>SIMULATION CONTROL</h2>
+                <div class="buttons">
+                    <button id="start-btn" class="btn btn-start">START SIMULATION</button>
+                    <button id="reset-btn" class="btn btn-reset">CLEAR / RESET</button>
+                </div>
+                <p id="form-error" class="form-error"></p>
+            </div>
+
+            <div class="console-panel">
+                <h2>LIVE SIMULATION CONSOLE</h2>
+                <div class="console" id="console">
+                    <div class="console-line">Awaiting simulation start...</div>
+                </div>
+            </div>
+
+            <div class="summary-panel" id="summary-panel" style="display:none;">
+                <h2>SIMULATION SUMMARY</h2>
+                <div class="summary-grid" id="summary-grid"></div>
+            </div>
+
+            <div class="report-panel" id="report-panel" style="display:none;">
+                <h2>REPORT</h2>
+                <p class="report-hint">Simulation complete. Download the full PDF report below.</p>
+                <button id="download-btn" class="btn btn-download">DOWNLOAD SIMULATION REPORT (PDF)</button>
+            </div>
+        </div>
+
+        <footer>
+            <p>Authorized localhost educational simulator for B.Tech cybersecurity project</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/simulator.js') }}"></script>
+</body>
+</html>
