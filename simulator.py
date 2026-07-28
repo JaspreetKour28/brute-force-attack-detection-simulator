@@ -35,7 +35,6 @@ DELAY_BETWEEN = 2.0       # "Waiting before next attempt..." time
 
 # Deliberately incorrect test passwords — never use or store the real password
 TEST_PASSWORDS = ["wrongpass1", "wrongpass2", "wrongpass3"]
-PRECHECK_PASSWORD = "precheck_test_invalid"
 
 
 # ──────────────────────────────────────────────
@@ -74,33 +73,6 @@ def _determine_account_state(response_text):
     return "ACTIVE"
 
 
-def _estimate_previous_failures(response_text):
-    """Try to extract a consecutive-failure count from the response HTML.
-
-    Returns the best estimate of failures BEFORE this probe, or 0 if
-    nothing is detected.  This is a best-effort heuristic.
-    """
-    text = response_text.lower()
-    # Look for common patterns the Velora app might include
-    patterns = [
-        r'(\d+)\s*consecutive',
-        r'(\d+)\s*failed\s*attempt',
-        r'attempts?\s*remaining.*?(\d+)',
-        r'(\d+)\s*(?:more|remaining)\s*attempt',
-        r'failure\s*count[:\s]+(\d+)',
-    ]
-    for pat in patterns:
-        m = re.search(pat, text)
-        if m:
-            val = int(m.group(1))
-            # If "remaining" pattern, convert: remaining=2 → failures=1 (for threshold 3)
-            if "remaining" in pat or "more" in pat:
-                return max(0, MAX_ATTEMPTS - val - 1)
-            # Direct count: subtract 1 for the probe itself
-            return max(0, val - 1)
-    return 0
-
-
 # ──────────────────────────────────────────────
 # Simulation
 # ──────────────────────────────────────────────
@@ -109,8 +81,6 @@ def run_simulation(target_url, target_app, target_email):
     """Run controlled brute force simulation with phased visual pacing.
 
     Event types yielded (in order):
-        PRECHECK_LOCKED        — account already locked
-        PRE_SIMULATION_STATE   — active account with previous history
         ATTEMPT_PREPARING      — heading shown, "Preparing attempt..."
         ATTEMPT_SENDING        — "Sending controlled login request..."
         ATTEMPT_ANALYZING      — "Response received. Analyzing..."
@@ -125,80 +95,6 @@ def run_simulation(target_url, target_app, target_email):
     lockout_on_attempt = None
     pre_sim_account_state = "ACTIVE"
     pre_sim_previous_failures = 0
-
-    # ══════════════════════════════════════════
-    # PRE-CHECK
-    # ══════════════════════════════════════════
-    precheck_ts = _format_ist(_now_ist())
-    try:
-        resp = requests.post(
-            target_url,
-            data={"email": target_email, "password": PRECHECK_PASSWORD},
-            timeout=5,
-        )
-        precheck_state = _determine_account_state(resp.text)
-        precheck_text = resp.text
-    except Exception:
-        precheck_state = "UNKNOWN"
-        precheck_text = ""
-
-    if precheck_state == "LOCKED":
-        yield {
-            "type": "PRECHECK_LOCKED",
-            "data": {
-                "timestamp": precheck_ts,
-                "target_app": target_app,
-                "target_url": target_url,
-                "target_account": target_email,
-                "account_state": "ALREADY LOCKED",
-                "simulation_state": "STOPPED",
-                "message": (
-                    "The selected target account was already temporarily locked "
-                    "before this simulation started."
-                ),
-                "attempts_executed": 0,
-            },
-        }
-        end_time = _now_ist()
-        summary = {
-            "type": "SIMULATION_SUMMARY",
-            "start_time": _format_ist(start_time),
-            "end_time": _format_ist(end_time),
-            "duration": str(end_time - start_time).split(".")[0],
-            "attempts_executed": 0,
-            "failed_attempts": 0,
-            "target_app": target_app,
-            "target_url": target_url,
-            "target_account": target_email,
-            "final_account_state": "ALREADY LOCKED",
-            "simulation_status": "STOPPED",
-            "attempts": [],
-            "pre_sim_account_state": "ALREADY LOCKED",
-            "pre_sim_previous_failures": "N/A",
-            "lockout_on_attempt": None,
-        }
-        run_simulation._last_summary = summary
-        yield summary
-        return
-
-    # Account is active — estimate pre-existing failures
-    pre_sim_previous_failures = _estimate_previous_failures(precheck_text)
-    pre_sim_account_state = "ACTIVE"
-
-    if pre_sim_previous_failures > 0:
-        yield {
-            "type": "PRE_SIMULATION_STATE",
-            "data": {
-                "timestamp": precheck_ts,
-                "target_account": target_email,
-                "account_state": "ACTIVE",
-                "previous_failed_attempts": pre_sim_previous_failures,
-                "warning": (
-                    "The selected account already has failed login history. "
-                    "Velora may activate its lockout before simulator Attempt 3."
-                ),
-            },
-        }
 
     # ══════════════════════════════════════════
     # MAIN ATTEMPT LOOP
